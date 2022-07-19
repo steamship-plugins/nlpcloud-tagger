@@ -1,0 +1,29 @@
+{
+  "type": "plugin",
+  "name": "OneAI Tagger",
+  "handle": "oneai-tagger",
+  "version": "0.0.1",
+  "description": "Tags text using the OneAI API.",
+  "author": "",
+  "entrypoint": "src.api.handler",
+  "plugin": {
+    "type": "tagger",
+    "path": "/tag",
+    "isTrainable": false,
+    "configTemplate": {
+      "apikey": {
+        "type": "string"
+      },
+      "input_type": {
+        "type": "string",
+        "default": "article"
+      },
+      "skills": {
+        "type": "string",
+        "default": "entities"
+      }
+    },
+    "transport": "jsonOverHttp",
+    "runPath": "/run"
+  }
+}

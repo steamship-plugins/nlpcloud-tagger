@@ -1,0 +1,143 @@
+Damon:
+hello
+
+Damon:
+Is there somewhere that describes what the beeps mean? It’s so loud it hurts my ears!
+
+Clara:
+Hello Damon, welcome to the Chatcaffe Support Service. I am Clara here to help you with your issue.
+
+Damon:
+Hi
+
+Clara:
+I'm sorry you feel that way, it's embarrassing.
+
+Clara:
+In order to serve you more effectively, can you please explain in brief the issue faced by you?
+
+Damon:
+sure
+
+Damon:
+I power on the system, and immediately I get these annoying beeping noises!
+
+Clara:
+Damon, can you please let me know the exact number of beeps you get?
+
+Damon:
+total? About 8
+
+Damon:
+just like those above
+
+Clara:
+Just to confirm, are you getting one long and three short , three long and one short beep after you start your system?
+
+Damon:
+all are short.
+
+Clara:
+When did the system start doing this? Also, it would be very helpful to know whether you have recently installed any new hardware or software?
+
+Damon:
+from what I understand there was a light pen interface card installed on this machine some time ago, it is removed and no longer available. I do not know when it last worked properly.
+
+Damon:
+there is no other hardware on the machine, I also took the liberty of disconnecting the floppy, cdrom, and HD, to see if that changed anything, it didn't
+
+Damon:
+tried different RAM as well.
+
+Clara:
+Please hold on for a moment, while I search for a resolution for your issue.
+
+Damon:
+sure
+
+Clara:
+Have you tried reseating the RAM in the PCI slot?
+
+Damon:
+there is nothing in the pci slots.
+
+Damon:
+I have tried different ram though
+
+Clara:
+The issue you are facing is due to not installing the memory in the PCI slots and hence you are getting the beeps. I suggest you to please insert the memory in the PCI slots and then restart the system. Please take your time and try out the solution. If you have any problems, please feel free to contact us again. We are here 24 hours a day, 7days a week to assist you.
+
+Clara:
+Is that alright with you?
+
+Damon:
+Are you kidding me? RAM can't fit into a PCI slot it doesn't physically go in
+
+Damon:
+SDRAM can only fit into DIMM sockets
+
+Clara:
+Are you using the memory cards which were orginally shipped along with the system?
+
+Damon:
+yes
+
+Damon:
+and tried new ones
+
+Clara:
+Damon:, to resolve the issue further, I suggest you to please try to install the earlier SDRAM memory cards in the slots and then boot the system. I am sure this will help to fix the issue faced by you.
+
+Damon:
+already did. the ram must be bad then
+
+Damon:
+is there replacement ram available?
+
+Damon:
+is it just normal sdram? looks like it.
+
+Clara:
+Do you wish to have information on SDRAM installed on this system?
+
+Damon:
+sure
+
+Clara:
+I am sending you the required web page which contains the details.
+
+Clara:
+http://www.Chatcaffe.com/longmeaninglessurl.html
+
+Clara:
+Did you get the web page?
+
+Damon:
+yes, is there a limit to the maximum amount of ram on the memory module?
+
+Clara:
+I am sending you a web page that will provide you details regarding this, please review the web page.
+
+Damon:
+oh, and if I needed to find out what various post error beeps mean, what is the name of the BIOS used on the system?
+
+Clara:
+http://www.ChatCaffe.com/2ndlongmeaninglessurl.shtml
+
+Damon:
+got it.
+
+Clara:
+The motherboard has Phoenix bios.
+
+Clara:
+Is that fine with you?
+
+Damon:
+yep,
+
+Clara:
+Thank you Damon, for your valuable time. It was a pleasure to assist you.
+
+Damon:
+Thanks Clara
