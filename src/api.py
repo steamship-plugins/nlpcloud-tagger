@@ -14,7 +14,8 @@ from steamship.plugin.outputs.block_and_tag_plugin_output import BlockAndTagPlug
 from steamship.plugin.service import PluginRequest
 from steamship.plugin.tagger import Tagger
 
-from src.nlpcloud import NlpCloudRequest, NlpCloudClient, NlpCloudModel, NlpCloudTask, VALID_TASK_MODELS
+from src.nlpcloud import NlpCloudClient, NlpCloudModel, NlpCloudTask, VALID_TASK_MODELS, \
+    validate_task_and_model
 
 
 class NlpCloudTaggerPluginConfig(Config):
@@ -36,9 +37,7 @@ class NlpCloudTaggerPlugin(Tagger, App):
             raise SteamshipError(message="Missing `api_key` field in Plugin configuration dictionary.")
 
         # We know from docs.nlpcloud.com that only certain task<>model pairings are valid.
-        if self.config.task in VALID_TASK_MODELS:
-            if self.config.model not in VALID_TASK_MODELS[self.config.task]:
-                raise SteamshipError(message=f"Model {self.config.model} is not compatible with task {self.config.task}. Valid models for this task are: {VALID_TASK_MODELS[self.config.task]}.")
+        validate_task_and_model(self.config.task, self.config.model)
 
     def config_cls(self) -> Type[NlpCloudTaggerPluginConfig]:
         return NlpCloudTaggerPluginConfig

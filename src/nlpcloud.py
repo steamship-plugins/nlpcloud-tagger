@@ -4,8 +4,9 @@ from enum import Enum
 from typing import List, Optional, Dict, TypedDict
 
 import requests
-from steamship import SteamshipError, TagKind
+from steamship import SteamshipError, TagKind, DocTag
 from steamship.data.tags.tag import Tag
+import time
 
 class NlpCloudTask(str, Enum):
     ENTITIES = "entities"
@@ -148,17 +149,6 @@ VALID_TASK_MODELS = {
     ]
 }
 
-class NlpCloudRequest:
-    model: NlpCloudModel
-    task: NlpCloudTask
-    text: str
-
-    def __init__(self, model: NlpCloudModel, task: NlpCloudTask, text: str):
-        self.model = model
-        self.task = task
-        self.text = text
-
-
 class NlpCloudOutputLabel(TypedDict):
     start: Optional[int]
     end: Optional[int]
@@ -172,7 +162,7 @@ def nlp_cloud_response_to_steamship_tag(task: NlpCloudTask, input_text: str, res
     if task == NlpCloudTask.ENTITIES:
         # {type: str, start: int, end: int}
         return [
-            Tag.CreateRequest(kind=TagKind.ent, name=tag.get("type"), start=tag.get("start"), end=tag.get("end"))
+            Tag.CreateRequest(kind=TagKind.ent, name=tag.get("type"), start_idx=tag.get("start"), end_idx=tag.get("end"))
             for tag in response.get("entities", [])
         ]
     elif task == NlpCloudTask.NOUNS_CHUNKS:
@@ -184,7 +174,7 @@ def nlp_cloud_response_to_steamship_tag(task: NlpCloudTask, input_text: str, res
             try:
                 start = input_text.index(text)
                 end = start + len(text)
-                ret.append(Tag.CreateRequest(kind=TagKind.pos, name="noun_chunk", start=start, end=end, value=tag))
+                ret.append(Tag.CreateRequest(kind=TagKind.pos, name="noun_chunk", start_idx=start, end_idx=end, value=tag))
             except:
                 logging.error(f"Text: {text} was not found for 'noun_chunk' in input text.")
         return ret
@@ -233,62 +223,55 @@ def nlp_cloud_response_to_steamship_tag(task: NlpCloudTask, input_text: str, res
         raise SteamshipError(message=f"Result processing of NLPCloud task {task} is not yet implemented")
     elif task == NlpCloudTask.TOKENS:
         # {tokens: [{ start, end, index, text, lemma, ws_after}]}
-        raise SteamshipError(message=f"Result processing of NLPCloud task {task} is not yet implemented")
+        return [
+            Tag.CreateRequest(
+                kind=TagKind.doc,
+                name=DocTag.token,
+                start_idx=token.get("start"),
+                end_idx=token.get("end"),
+                value={
+                    "ws_after": token.get("ws_after"),
+                    "lemma": token.get("lemma"),
+                    "text": token.get("text")
+                }
+            )
+            for token in response.get("tokens", [])
+        ]
     elif task == NlpCloudTask.EMBEDDINGS:
         #: {embeddings: [float]}
         raise SteamshipError(message=f"Result processing of NLPCloud task {task} is not yet implemented")
 
 
+def nlp_cloud_requests(task: NlpCloudTask, inputs: List[str], labels: Optional[List[str]] = None, multi_class: Optional[bool] = False) -> List[dict]:
+    if task in [
+        NlpCloudTask.ENTITIES,
+        NlpCloudTask.NOUNS_CHUNKS,
+        NlpCloudTask.INTENT_CLASSIFICATION,
+        NlpCloudTask.KEY_PHRASE_EXTRACTION,
+        NlpCloudTask.LANGUAGE_DETECTION,
+        NlpCloudTask.SENTENCE_DEPENDENCIES,
+        NlpCloudTask.SENTIMENT,
+        NlpCloudTask.TOKENS
+    ]:
+        # {text: str}
+        return [{"text": s} for s in inputs]
+    elif task == NlpCloudTask.CLASSIFICATION:
+        # {text: str, multi_class: bool, labels: str[]}
+        if labels is None:
+            raise SteamshipError(f"Task type {task} requires non-null `labels` setting to be configured.")
+        return [{"text": s, "labels": labels, "multi_class": multi_class} for s in inputs]
+    elif task == NlpCloudTask.EMBEDDINGS:
+        #: {sentences: [str]}
+        return [{"sentences": inputs}]
 
-@dataclasses.dataclass
-class OneAiOutputBlock:
-    block_id: str
-    generating_step: str
-    origin_block: str
-    origin_span: List[int]
-    text: str
-    labels: List[OneAiOutputLabel]
+    raise SteamshipError(f"Unable to prepare NLP Cloud input for task type {task}.")
 
-    @staticmethod
-    def from_dict(d: dict) -> Optional["OneAiOutputBlock"]:
-        if d is None:
-            return None
-
-        return OneAiOutputBlock(
-            block_id=d.get("block_id", None),
-            generating_step=d.get("generating_step", None),
-            origin_block=d.get("origin_block", None),
-            origin_span=d.get("origin_span", None),
-            text=d.get("text", None),
-            labels=[OneAiOutputLabel.from_dict(l) for l in d.get("labels", [])]
-        )
-
-
-@dataclasses.dataclass
-class OneAiResponse:
-    input_text: str
-    status: str
-    error: str
-    output: List[OneAiOutputBlock]
-
-    @staticmethod
-    def from_dict(d: dict) -> Optional["OneAiResponse"]:
-        if d is None:
-            return None
-
-        return OneAiResponse(
-            input_text=d.get("input_text", None),
-            status=d.get("status", None),
-            error=d.get("error", None),
-            output=[OneAiOutputBlock.from_dict(b) for b in d.get("output", [])]
-        )
-
-    def to_tags(self) -> List[Tag.CreateRequest]:
-        tags: List[Tag.CreateRequest] = []
-        if self.output and self.output[0]:
-            for label in self.output[0].labels:
-                tags.append(label.to_steamship_tag())
-        return tags
+def validate_task_and_model(task: NlpCloudTask, model: NlpCloudModel):
+    # We know from docs.nlpcloud.com that only certain task<>model pairings are valid.
+    if task in VALID_TASK_MODELS:
+        if model not in VALID_TASK_MODELS[task]:
+            raise SteamshipError(
+                message=f"Model {model.value} is not compatible with task {task.value}. Valid models for this task are: {[m.value for m in VALID_TASK_MODELS[task]]}.")
 
 
 class NlpCloudClient:
@@ -297,46 +280,36 @@ class NlpCloudClient:
     def __init__(self, key: str):
         self.key = key
 
-    def request(self, request: NlpCloudRequest) -> OneAiResponse:
+    def request(self, task: NlpCloudTask, model: NlpCloudModel, inputs: List[str], **kwargs) -> List[List[Tag.CreateRequest]]:
         """Performs an NlpCloud request. Throw a SteamshipError in the event of error or empty response.
 
         See: https://docs.nlpcloud.io/
         """
 
+        validate_task_and_model(task, model)
+
         headers = {
             "Authorization": f"Token {self.key}",
             "Content-Type": "application/json"
         }
-        url = f"{NlpCloudClient.URL/{request.model.value}/{request.task.value}"
+        url = f"{NlpCloudClient.URL}/{model.value}/{task.value}"
+        input_dict = nlp_cloud_requests(task, inputs, **kwargs)
 
-        request_dict = dataclasses.asdict(request)
-        response = requests.post(
-            url=OneAIClient.URL,
-            headers=headers,
-            json=request_dict,
-        )
+        ret = []
+        for json_body, text_input in zip(input_dict, inputs):
+            time.sleep(1.1)
+            response = requests.post(url=url, headers=headers, json=json_body)
 
-        if not response.ok:
-            raise SteamshipError(
-                message="Request to OneAI failed. Code={}. Body={}".format(response.status_code, response.text)
-            )
-
-        response_dict = response.json()
-        if not response_dict:
-            raise SteamshipError(
-                message="Request from OneAI could not be interpreted as JSON."
-            )
-
-        try:
-            ret = OneAiResponse.from_dict(response_dict)
-            if not ret:
+            if not response.ok:
                 raise SteamshipError(
-                    message="Request from OneAI could not be interpreted as a OneAIResponse object."
+                    message="Request to NLP Cloud failed. Code={}. Body={}".format(response.status_code, response.text)
                 )
-            return ret
-        except Exception as ex:
-            raise SteamshipError(
-                message="Request from OneAI could not be interpreted as a OneAIResponse object. Exception: {}".format(
-                    ex),
-                error=ex
-            )
+
+            response_dict = response.json()
+            if not response_dict:
+                raise SteamshipError(
+                    message="Request from NLP Cloud could not be interpreted as JSON."
+                )
+
+            ret.append(nlp_cloud_response_to_steamship_tag(task, text_input, response_dict))
+        return ret
