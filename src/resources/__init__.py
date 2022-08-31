@@ -1,0 +1,1 @@
+"""Resources for bundle inclusion."""

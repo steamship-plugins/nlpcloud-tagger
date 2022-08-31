@@ -1,11 +1,10 @@
 """Steamship NLPCloud Plugin
 """
 
-from typing import List, Type, Dict, Any
+from typing import Any, Dict, Optional, Type
 
-from pydantic import validator
 from steamship import Block, Steamship
-from steamship.app import App, create_handler, Response
+from steamship.app import App, create_handler
 from steamship.base.error import SteamshipError
 from steamship.data.file import File
 from steamship.plugin.blockifier import Config
@@ -14,12 +13,16 @@ from steamship.plugin.outputs.block_and_tag_plugin_output import BlockAndTagPlug
 from steamship.plugin.service import PluginRequest
 from steamship.plugin.tagger import Tagger
 
-from src.nlpcloud import NlpCloudClient, NlpCloudModel, NlpCloudTask, VALID_TASK_MODELS, \
-    validate_task_and_model
+from src.nlpcloud import (
+    NlpCloudClient,
+    NlpCloudModel,
+    NlpCloudTask,
+    validate_task_and_model,
+)
 
 
 class NlpCloudTaggerPluginConfig(Config):
-    api_key: str  # TODO: Ensure this is hard-checked to be not none
+    api_key: Optional[str]
     task: NlpCloudTask
     model: NlpCloudModel
 
@@ -30,11 +33,15 @@ class NlpCloudTaggerPlugin(Tagger, App):
 
         # This plugin requires configuration
         if self.config is None:
-            raise SteamshipError(message="Missing Plugin Instance configuration dictionary.")
+            raise SteamshipError(
+                message="Missing Plugin Instance configuration dictionary."
+            )
 
         # The api_key must not be none
         if self.config.api_key is None:
-            raise SteamshipError(message="Missing `api_key` field in Plugin configuration dictionary.")
+            raise SteamshipError(
+                message="Missing `api_key` field in Plugin configuration dictionary."
+            )
 
         # We know from docs.nlpcloud.com that only certain task<>model pairings are valid.
         validate_task_and_model(self.config.task, self.config.model)
@@ -42,7 +49,9 @@ class NlpCloudTaggerPlugin(Tagger, App):
     def config_cls(self) -> Type[NlpCloudTaggerPluginConfig]:
         return NlpCloudTaggerPluginConfig
 
-    def run(self, request: PluginRequest[BlockAndTagPluginInput]) -> BlockAndTagPluginOutput:
+    def run(
+        self, request: PluginRequest[BlockAndTagPluginInput]
+    ) -> BlockAndTagPluginOutput:
         # TODO: Ensure base Tagger class checks to make sure this is not None
         file = request.data.file
 
@@ -58,9 +67,9 @@ class NlpCloudTaggerPlugin(Tagger, App):
 
             # Create tags for that block via OneAI and add them
             request = NlpCloudRequest(
-                model = self.config.model,
-                task = self.config.task,
-                text = block.text,
+                model=self.config.model,
+                task=self.config.task,
+                text=block.text,
             )
             response = client.request(request)
             if response:

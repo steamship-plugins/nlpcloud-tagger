@@ -1,18 +1,19 @@
 {
   "type": "plugin",
-  "name": "OneAI Tagger",
-  "handle": "oneai-tagger",
-  "version": "0.0.1",
-  "description": "Tags text using the OneAI API.",
-  "author": "",
-  "entrypoint": "src.api.handler",
+  "name": "NLPCloud Tagger",
+  "handle": "nlpcloud-tagger",
+  "version": "1.0.0",
+  "description": "Tags text using the NLP Cloud API.",
+  "author": "Steamship",
+  "entrypoint": "api.handler",
   "plugin": {
     "type": "tagger",
     "path": "/tag",
     "isTrainable": false,
     "configTemplate": {
-      "apikey": {
-        "type": "string"
+      "api_key": {
+        "type": "string",
+        "default": ""
       },
       "input_type": {
         "type": "string",
