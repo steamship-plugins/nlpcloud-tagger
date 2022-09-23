@@ -8,7 +8,7 @@ __copyright__ = "Steamship"
 __license__ = "MIT"
 
 from test.util import nlpcloud, read_test_file
-
+from nlpcloud.client import NlpCloudClient
 
 @pytest.mark.usefixtures("nlpcloud")
 def test_live_sentiment(nlpcloud: NlpCloudClient):

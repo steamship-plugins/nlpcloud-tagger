@@ -1,9 +1,11 @@
 """Steamship NLPCloud Plugin
 """
 
-from typing import Any, Dict, Optional, Type
-
-from steamship import Block, Steamship
+from typing import Any, Dict, Optional, Type, List
+import toml
+import pathlib
+import logging
+from steamship import Block, Steamship, Tag
 from steamship.app import App, create_handler
 from steamship.base.error import SteamshipError
 from steamship.data.file import File
@@ -13,13 +15,15 @@ from steamship.plugin.outputs.block_and_tag_plugin_output import BlockAndTagPlug
 from steamship.plugin.service import PluginRequest
 from steamship.plugin.tagger import Tagger
 
-from src.nlpcloud import (
-    NlpCloudClient,
+from nlpcloud.api_spec import (
     NlpCloudModel,
     NlpCloudTask,
     validate_task_and_model,
 )
 
+from nlpcloud.client import (
+    NlpCloudClient,
+)
 
 class NlpCloudTaggerPluginConfig(Config):
     api_key: Optional[str]
@@ -28,20 +32,17 @@ class NlpCloudTaggerPluginConfig(Config):
 
 
 class NlpCloudTaggerPlugin(Tagger, App):
-    def __init__(self, client: Steamship, config: Dict[str, Any]):
-        super().__init__(client, config)
-
-        # This plugin requires configuration
-        if self.config is None:
-            raise SteamshipError(
-                message="Missing Plugin Instance configuration dictionary."
-            )
-
-        # The api_key must not be none
-        if self.config.api_key is None:
-            raise SteamshipError(
-                message="Missing `api_key` field in Plugin configuration dictionary."
-            )
+    def __init__(self, **kwargs):
+        secret_kwargs = toml.load(
+            str(pathlib.Path(__file__).parent / ".steamship" / "secrets.toml")
+        )
+        config = kwargs["config"] or {}
+        kwargs["config"] = {
+            **secret_kwargs,
+            **{k: v for k, v in config.items() if v != ""},
+        }
+        super().__init__(**kwargs)
+        logging.info(self.config)
 
         # We know from docs.nlpcloud.com that only certain task<>model pairings are valid.
         validate_task_and_model(self.config.task, self.config.model)
@@ -62,18 +63,18 @@ class NlpCloudTaggerPlugin(Tagger, App):
         output = BlockAndTagPluginOutput(file=File.CreateRequest())
 
         for block in request.data.file.blocks:
-            # Create an output block for this block
-            output_block = Block.CreateRequest(id=block.id)
-
             # Create tags for that block via OneAI and add them
-            request = NlpCloudRequest(
+            tags_lists: List[List[Tag.CreateRequest]] = client.request(
                 model=self.config.model,
                 task=self.config.task,
-                text=block.text,
+                inputs=[block.text],
             )
-            response = client.request(request)
-            if response:
-                output_block.tags = response.to_tags()
+
+            tags = tags_lists[0] or []
+
+            # Create an output block for this block
+            output_block = Block.CreateRequest(id=block.id, tags=tags)
+
 
             # Attach the output block to the response
             output.file.blocks.append(output_block)

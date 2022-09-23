@@ -11,10 +11,6 @@
     "path": "/tag",
     "isTrainable": false,
     "configTemplate": {
-      "api_key": {
-        "type": "string",
-        "default": ""
-      },
       "input_type": {
         "type": "string",
         "default": "article"
