@@ -1,23 +1,21 @@
 {
   "type": "plugin",
-  "name": "NLPCloud Tagger",
   "handle": "nlpcloud-tagger",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Tags text using the NLP Cloud API.",
   "author": "Steamship",
   "entrypoint": "api.handler",
+  "public": true,
   "plugin": {
     "type": "tagger",
     "path": "/tag",
     "isTrainable": false,
     "configTemplate": {
-      "input_type": {
-        "type": "string",
-        "default": "article"
+      "task": {
+        "type": "string"
       },
-      "skills": {
-        "type": "string",
-        "default": "entities"
+      "model": {
+        "type": "string"
       }
     },
     "transport": "jsonOverHttp",
