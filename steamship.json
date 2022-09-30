@@ -6,18 +6,18 @@
   "author": "Steamship",
   "entrypoint": "api.handler",
   "public": true,
+  "configTemplate": {
+    "task": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    }
+  },
   "plugin": {
     "type": "tagger",
     "path": "/tag",
     "isTrainable": false,
-    "configTemplate": {
-      "task": {
-        "type": "string"
-      },
-      "model": {
-        "type": "string"
-      }
-    },
     "transport": "jsonOverHttp",
     "runPath": "/run"
   }
