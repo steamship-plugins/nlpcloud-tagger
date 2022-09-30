@@ -30,11 +30,13 @@ def test_live_entities(nlpcloud: NlpCloudClient):
 
 @pytest.mark.usefixtures("nlpcloud")
 def test_tokenize_chinese(nlpcloud: NlpCloudClient):
+    texts = ["這個model會弄繁體嗎", "这个model会弄繁体吗"]
     result = nlpcloud.request(
         NlpCloudTask.TOKENS,
         NlpCloudModel.ZH_CORE_WEB_LG,
-        ["這個model會弄繁體嗎", "这个model会弄繁体吗"],
+        texts,
     )
-    for r in result:
+    for r, t in zip(result, texts):
+        assert len(r) == 5 or len(r) == 6
         for tag in r:
-            print(tag.value.get("text"))
+            assert tag.value.get('text') in t

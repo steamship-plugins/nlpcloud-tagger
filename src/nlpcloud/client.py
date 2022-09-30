@@ -92,9 +92,16 @@ def nlp_cloud_response_to_steamship_tag(
         )
     elif task == NlpCloudTask.SENTIMENT:
         # {scored_labels: [ {label, score} ]}
-        raise SteamshipError(
-            message=f"Result processing of NLPCloud task {task} is not yet implemented"
-        )
+        return [
+            Tag.CreateRequest(
+                kind=label.get("emotion"),
+                name=label.get("label"),
+                value={
+                    "score": label.get("score")
+                },
+            )
+            for label in response.get("scored_labels", [])
+        ]
     elif task == NlpCloudTask.TOKENS:
         # {tokens: [{ start, end, index, text, lemma, ws_after}]}
         return [
