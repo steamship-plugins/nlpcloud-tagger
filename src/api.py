@@ -1,29 +1,27 @@
 """Steamship NLPCloud Plugin
 """
 
-from typing import Any, Dict, Optional, Type, List
-import toml
-import pathlib
 import logging
-from steamship import Block, Steamship, Tag
+import pathlib
+from typing import List, Optional, Type
+
+import toml
+from steamship import Block, Tag
 from steamship.app import App, create_handler
 from steamship.base.error import SteamshipError
 from steamship.data.file import File
 from steamship.plugin.blockifier import Config
-from steamship.plugin.inputs.block_and_tag_plugin_input import BlockAndTagPluginInput
-from steamship.plugin.outputs.block_and_tag_plugin_output import BlockAndTagPluginOutput
+from steamship.plugin.inputs.block_and_tag_plugin_input import \
+    BlockAndTagPluginInput
+from steamship.plugin.outputs.block_and_tag_plugin_output import \
+    BlockAndTagPluginOutput
 from steamship.plugin.service import PluginRequest
 from steamship.plugin.tagger import Tagger
 
-from nlpcloud.api_spec import (
-    NlpCloudModel,
-    NlpCloudTask,
-    validate_task_and_model,
-)
+from nlpcloud.api_spec import (NlpCloudModel, NlpCloudTask,
+                               validate_task_and_model)
+from nlpcloud.client import NlpCloudClient
 
-from nlpcloud.client import (
-    NlpCloudClient,
-)
 
 class NlpCloudTaggerPluginConfig(Config):
     api_key: Optional[str]
@@ -74,7 +72,6 @@ class NlpCloudTaggerPlugin(Tagger, App):
 
             # Create an output block for this block
             output_block = Block.CreateRequest(id=block.id, tags=tags)
-
 
             # Attach the output block to the response
             output.file.blocks.append(output_block)

@@ -1,12 +1,9 @@
 """Collection of object specifications used to communicate with the NLPCloud API."""
 from enum import Enum
-from typing import Dict, List, Optional, Union
-
-from pydantic import BaseModel
-from steamship.data.tags.tag import Tag
-from typing import List, Optional, Dict, TypedDict
+from typing import Optional, TypedDict
 
 from steamship import SteamshipError
+
 
 class NlpCloudTask(str, Enum):
     ENTITIES = "entities"
@@ -20,11 +17,14 @@ class NlpCloudTask(str, Enum):
     TOKENS = "tokens"
     EMBEDDINGS = "embeddings"
 
+
 class NlpCloudModel(str, Enum):
     PARAPHRASE_MULTILINGUAL_MPNET_BASE_V2 = "paraphrase-multilingual-mpnet-base-v2"
     BART_LARGE_MNLI_YAHOO_ANSWERS = "bart-large-mnli-yahoo-answers"
     XLM_ROBERTA_LARGE_XNLI = "xlm-roberta-large-xnli"
-    DISTILBERT_BASE_UNCASED_FINETUNED_SST_2_ENGLISH = "distilbert-base-uncased-finetuned-sst-2-english"
+    DISTILBERT_BASE_UNCASED_FINETUNED_SST_2_ENGLISH = (
+        "distilbert-base-uncased-finetuned-sst-2-english"
+    )
     DISTILBERT_BASE_UNCASED_EMOTION = "distilbert-base-uncased-emotion"
     FINBERT = "finbert"
     GPT_J = "gpt-j"
@@ -47,6 +47,7 @@ class NlpCloudModel(str, Enum):
     PT_CORE_NEWS_LG = "pt_core_news_lg"
     RO_CORE_NEWS_LG = "ro_core_news_lg"
     ES_CORE_NEWS_LG = "es_core_news_lg"
+
 
 VALID_TASK_MODELS = {
     NlpCloudTask.ENTITIES: [
@@ -145,9 +146,10 @@ VALID_TASK_MODELS = {
     ],
     NlpCloudTask.EMBEDDINGS: [
         NlpCloudModel.PARAPHRASE_MULTILINGUAL_MPNET_BASE_V2,
-        NlpCloudModel.GPT_J
-    ]
+        NlpCloudModel.GPT_J,
+    ],
 }
+
 
 class NlpCloudOutputLabel(TypedDict):
     start: Optional[int]
@@ -157,9 +159,12 @@ class NlpCloudOutputLabel(TypedDict):
     lemma: Optional[str]
     ws_after: Optional[str]
 
+
 def validate_task_and_model(task: NlpCloudTask, model: NlpCloudModel):
     # We know from docs.nlpcloud.com that only certain task<>model pairings are valid.
     if task in VALID_TASK_MODELS:
         if model not in VALID_TASK_MODELS[task]:
             raise SteamshipError(
-                message=f"Model {model.value} is not compatible with task {task.value}. Valid models for this task are: {[m.value for m in VALID_TASK_MODELS[task]]}.")
+                message=f"Model {model.value} is not compatible with task {task.value}."
+                    "Valid models for this task are: {[m.value for m in VALID_TASK_MODELS[task]]}."
+            )

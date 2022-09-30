@@ -1,14 +1,13 @@
 import os
-from typing import List
 
 import pytest
-from pydantic import ValidationError
-from steamship import Block, DocTag, Steamship, SteamshipError
+from steamship import Block
 from steamship.data.file import File
-from steamship.plugin.inputs.block_and_tag_plugin_input import BlockAndTagPluginInput
+from steamship.plugin.inputs.block_and_tag_plugin_input import \
+    BlockAndTagPluginInput
 from steamship.plugin.service import PluginRequest
 
-from api import NlpCloudTaggerPlugin, NlpCloudTaggerPluginConfig
+from api import NlpCloudTaggerPlugin
 
 __copyright__ = "Steamship"
 __license__ = "MIT"
@@ -19,8 +18,8 @@ from nlpcloud.api_spec import NlpCloudModel, NlpCloudTask
 def _read_test_file_lines(filename: str) -> File:
     folder = os.path.dirname(os.path.abspath(__file__))
     lines = []
-    with open(os.path.join(folder, '..', 'test_data', 'inputs', filename), 'r') as f:
-        lines = list(map(lambda line: line, f.read().split('\n')))
+    with open(os.path.join(folder, "..", "test_data", "inputs", filename), "r") as f:
+        lines = list(map(lambda line: line, f.read().split("\n")))
     return lines
 
 
@@ -30,68 +29,121 @@ def _read_test_file(filename: str) -> File:
     return File(blocks=blocks)
 
 
-def test_tagger():
+def _file_from_string(string: str) -> File:
+    lines = string.split("\n")
+    blocks = list(map(lambda line: Block(text=line), lines))
+    return File(blocks=blocks)
+
+
+@pytest.fixture
+def parser():
+    parser = NlpCloudTaggerPlugin(
+        config={
+            "task": NlpCloudTask.TOKENS.value,
+            "model": NlpCloudModel.EN_CORE_WEB_LG.value,
+        }
+    )
+    return parser
+
+
+@pytest.fixture
+def language_detector():
+    parser = NlpCloudTaggerPlugin(
+        config={
+            "task": NlpCloudTask.LANGUAGE_DETECTION.value,
+            "model": NlpCloudModel.PYTHON_LANGDETECT.value,
+        }
+    )
+    return parser
+
+
+def test_parse_english_sentence(parser):
     """Test an end-to-end run on the general structure of the full request-response"""
-    tagger = NlpCloudTaggerPlugin(config={
-        "task": NlpCloudTask.TOKENS.value,
-        "model": NlpCloudModel.EN_CORE_WEB_LG.value
-    })
+    FILE = "roses.txt"
 
-    file = _read_test_file('weird_languages_pg.txt')
-    lines = _read_test_file_lines('weird_languages_pg.txt')
+    file = _read_test_file(FILE)
 
-    assert len(file.blocks) == 11
+    NUM_BLOCKS = 5  # Includes the empty lines
 
-    request = PluginRequest(data=BlockAndTagPluginInput(
-        file=file
-    ))
-    response = tagger.run(request)
+    assert len(file.blocks) == NUM_BLOCKS
 
-    assert (response.file.blocks is not None)
-    assert (len(response.file.blocks) == 11)
+    request = PluginRequest(data=BlockAndTagPluginInput(file=file))
+    response = parser.run(request)
 
-    # A Poem
-    para1 = response.file.blocks[0]
-    line1 = lines[0]
+    assert response.file.blocks is not None
+    assert len(response.file.blocks) == NUM_BLOCKS
 
-    print(para1)
+    line1 = response.file.blocks[0]
+
+    num_tokens = len(file.blocks[0].text.split(" ")) + 1
+
+    print(f"{num_tokens} {line1.text}")
+
+    tags = line1.tags
+
+    found_tokens = 0
+    for tag in tags:
+        if tag.kind == "doc" and tag.name == "token":
+            found_tokens += 1
+
+    assert found_tokens == num_tokens
 
 
-# def test_plugin_fails_with_bad_config():
-#     # With no client, no config
-#     with pytest.raises(TypeError):
-#         # TODO: How do we ignore the PyCharm "parameter unfilled" error below?
-#         OneAITaggerPlugin()
-#
-#     # With no config
-#     with pytest.raises(TypeError):
-#         # TODO: How do we ignore the PyCharm "parameter unfilled" error below?
-#         OneAITaggerPlugin(client=Steamship())
-#
-#     # With None config
-#     with pytest.raises(SteamshipError):
-#         # TODO: How do we ignore the PyCharm "parameter not what was expected" error below?
-#         OneAITaggerPlugin(client=Steamship(), config=None)
-#
-#     # With empty dict config s
-#     with pytest.raises(SteamshipError):
-#         OneAITaggerPlugin(client=Steamship(), config=dict())
-#
-#     valid_config = {
-#         "api_key": "foo",
-#         "input_type": "conversation",
-#         "skills": "foo"
-#     }
-#
-#     # Missing a required config field
-#     for key in valid_config.keys():
-#         bad_config = valid_config.copy()
-#         del bad_config[key]
-#         with pytest.raises(ValidationError):
-#             OneAITaggerPlugin(client=Steamship(), config=bad_config)
-#
-#     # Using a bad input_type
-#     bad_config = valid_config.copy()
-#     bad_config["input_type"] = "recording_of_dolphin_clicks"
-#     with pytest.raises(ValidationError):
-#         OneAITaggerPlugin(client=Steamship(), config=bad_config)
+@pytest.mark.parametrize(
+    "file,language",
+    [
+        (_file_from_string("Hi there!"), "en"),
+        (_file_from_string("你好！你叫什麼名字？"), "zh-cn"),  # Yikes!
+        (
+            _file_from_string("你好！你叫什么名字？"),
+            "zh-cn",
+        ),  # It looks like it doesn't distinguish!
+        (_file_from_string("こんにちは"), "ja"),
+        (_file_from_string("नमस्ते"), "hi"),
+    ],
+)
+def test_detect_language(language_detector, file, language):
+    # def test_detect_language(language_detector):
+    request = PluginRequest(data=BlockAndTagPluginInput(file=file))
+    response = language_detector.run(request)
+    assert len(response.file.blocks) == 1
+    assert len(response.file.blocks[0].tags) == 1
+    assert response.file.blocks[0].tags[0].kind == "language"
+    assert response.file.blocks[0].tags[0].name == language
+    assert response.file.blocks[0].tags[0].value.get("score") is not None
+
+
+@pytest.mark.parametrize(
+    "model,file,language,num_blocks,num_tokens",
+    [
+        (NlpCloudModel.EN_CORE_WEB_LG.value, _file_from_string("Hi there"), "en", 1, 2),
+        (
+            NlpCloudModel.ZH_CORE_WEB_LG.value,
+            _file_from_string("你好！你叫什麼名字？"),
+            "zh-cn",
+            1,
+            7,
+        ),
+        (NlpCloudModel.JA_CORE_NEWS_LG.value, _file_from_string("こんにちは"), "ja", 1, 1),
+    ],
+)
+def test_tokenize_some(model, file, language, num_blocks, num_tokens):
+    parser = NlpCloudTaggerPlugin(
+        config={"task": NlpCloudTask.TOKENS.value, "model": model}
+    )
+
+    request = PluginRequest(data=BlockAndTagPluginInput(file=file))
+    response = parser.run(request)
+
+    assert response.file.blocks is not None
+    assert len(response.file.blocks) == num_blocks
+
+    line1 = response.file.blocks[0]
+    tags = line1.tags
+
+    found_tokens = 0
+    for tag in tags:
+        if tag.kind == "doc" and tag.name == "token":
+            found_tokens += 1
+
+    assert found_tokens == num_tokens
