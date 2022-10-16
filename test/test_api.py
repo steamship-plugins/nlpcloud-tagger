@@ -56,6 +56,34 @@ def language_detector():
     )
     return parser
 
+@pytest.fixture
+def embedder():
+    embedder = NlpCloudTaggerPlugin(
+        config={
+            "task": NlpCloudTask.EMBEDDINGS.value,
+            "model": NlpCloudModel.PARAPHRASE_MULTILINGUAL_MPNET_BASE_V2.value,
+        }
+    )
+    return embedder
+
+
+def test_embed_english_sentence(embedder):
+    sentence = "Hello there"
+    FILE = "roses.txt"
+
+    file = _read_test_file(FILE)
+
+    NUM_BLOCKS = 5  # Includes the empty lines
+
+    request = PluginRequest(data=BlockAndTagPluginInput(file=file))
+    response = embedder.run(request)
+
+    for block in response.file.blocks:
+        for tag in block.tags:
+            assert tag.kind == 'embedding'
+            assert tag.value.get('value') is not None
+            assert len(tag.value.get('value')) == 768
+
 
 def test_parse_english_sentence(parser):
     """Test an end-to-end run on the general structure of the full request-response"""
