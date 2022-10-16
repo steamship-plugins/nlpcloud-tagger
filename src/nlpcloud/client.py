@@ -119,10 +119,20 @@ def nlp_cloud_response_to_steamship_tag(
             for token in response.get("tokens", [])
         ]
     elif task == NlpCloudTask.EMBEDDINGS:
-        #: {embeddings: [float]}
-        raise SteamshipError(
-            message=f"Result processing of NLPCloud task {task} is not yet implemented"
-        )
+        #: {embeddings: [[float]]}
+        embeddings = response.get("embeddings", [])
+        if len(embeddings) != 1:
+            raise SteamshipError(message=f"Got back {len(embeddings)} embeddings; expected 1.")
+
+        return [
+            Tag.CreateRequest(
+                kind="embedding",
+                name="via-nlpcloud",
+                value={
+                    "value": embeddings[0]  # For now we don't pool requests.
+                },
+            )
+        ]
 
 
 def nlp_cloud_requests(
