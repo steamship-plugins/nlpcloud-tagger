@@ -3,8 +3,8 @@ import time
 from typing import Dict, List, Optional
 
 import requests
-from steamship import DocTag, SteamshipError, TagKind
-from steamship.data.tags.tag import Tag
+from steamship import SteamshipError
+from steamship.data.tags import DocTag, Tag, TagKind
 
 from nlpcloud.api_spec import (NlpCloudModel, NlpCloudTask,
                                validate_task_and_model)
@@ -17,7 +17,7 @@ def nlp_cloud_response_to_steamship_tag(
         # {type: str, start: int, end: int}
         return [
             Tag.CreateRequest(
-                kind=TagKind.ent,
+                kind=TagKind.ENTITY,
                 name=tag.get("type"),
                 start_idx=tag.get("start"),
                 end_idx=tag.get("end"),
@@ -35,7 +35,7 @@ def nlp_cloud_response_to_steamship_tag(
                 end = start + len(text)
                 ret.append(
                     Tag.CreateRequest(
-                        kind=TagKind.pos,
+                        kind=TagKind.PART_OF_SPEECH,
                         name="noun_chunk",
                         start_idx=start,
                         end_idx=end,
@@ -106,8 +106,8 @@ def nlp_cloud_response_to_steamship_tag(
         # {tokens: [{ start, end, index, text, lemma, ws_after}]}
         return [
             Tag.CreateRequest(
-                kind=TagKind.doc,
-                name=DocTag.token,
+                kind=TagKind.DOCUMENT,
+                name=DocTag.TOKEN,
                 start_idx=token.get("start"),
                 end_idx=token.get("end"),
                 value={

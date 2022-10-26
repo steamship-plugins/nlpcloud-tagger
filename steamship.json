@@ -1,7 +1,7 @@
 {
   "type": "plugin",
   "handle": "nlpcloud-tagger",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Tags text using the NLP Cloud API.",
   "author": "Steamship",
   "entrypoint": "api.handler",
