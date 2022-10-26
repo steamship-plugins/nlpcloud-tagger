@@ -20,5 +20,20 @@
     "isTrainable": false,
     "transport": "jsonOverHttp",
     "runPath": "/run"
+  },
+  "steamshipRegistry": {
+    "tagline": "Entity tag, summarize, analyze, generate, and parse text.",
+    "tagline2": "Just load content into Steamship and apply NLP Cloud's full library of models..",
+    "usefulFor": "Useful for applying models across large datasets and then searching their results.",
+    "videoUrl": null,
+    "githubUrl": "https://github.com/steamship-plugins/nlpcloud-tagger",
+    "demoUrl": null,
+    "blogUrl": null,
+    "jupyterUrl": null,
+    "authorName": "Steamship",
+    "authorEmail": "hello@steamship.com",
+    "authorTwitter": "@GetSteamship",
+    "authorUrl": "https://www.steamship.com/",
+    "tags": ["NLP", "SpaCy", "Parsing", "Summarization", "NER", "Sentiment ANalysis", "Intent Classification"]
   }
 }
