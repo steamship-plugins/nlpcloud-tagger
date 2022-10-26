@@ -1,13 +1,15 @@
 import os
+from typing import List
 
 import pytest
 from steamship import Block
 from steamship.data.file import File
+from steamship.data.tags import DocTag
 from steamship.plugin.inputs.block_and_tag_plugin_input import \
     BlockAndTagPluginInput
-from steamship.plugin.service import PluginRequest
+from steamship.plugin.request import PluginRequest
 
-from api import NlpCloudTaggerPlugin
+from api import NlpCloudTaggerPlugin, NlpCloudTaggerPluginConfig
 
 __copyright__ = "Steamship"
 __license__ = "MIT"
@@ -15,7 +17,7 @@ __license__ = "MIT"
 from nlpcloud.api_spec import NlpCloudModel, NlpCloudTask
 
 
-def _read_test_file_lines(filename: str) -> File:
+def _read_test_file_lines(filename: str) -> List[str]:
     folder = os.path.dirname(os.path.abspath(__file__))
     lines = []
     with open(os.path.join(folder, "..", "test_data", "inputs", filename), "r") as f:
@@ -67,6 +69,18 @@ def embedder():
     return embedder
 
 
+def test_serialization():
+    config = {
+        "task": NlpCloudTask.LANGUAGE_DETECTION.value,
+        "model": NlpCloudModel.PYTHON_LANGDETECT.value,
+    }
+    obj = NlpCloudTaggerPluginConfig(**config)
+    assert obj.task == NlpCloudTask.LANGUAGE_DETECTION
+    assert obj.model == NlpCloudModel.PYTHON_LANGDETECT
+    assert obj.task.value == NlpCloudTask.LANGUAGE_DETECTION.value
+    assert obj.model.value == NlpCloudModel.PYTHON_LANGDETECT.value
+
+
 def test_embed_english_sentence(embedder):
     sentence = "Hello there"
     FILE = "roses.txt"
@@ -111,7 +125,7 @@ def test_parse_english_sentence(parser):
 
     found_tokens = 0
     for tag in tags:
-        if tag.kind == "doc" and tag.name == "token":
+        if tag.kind == DocTag.DOCUMENT and tag.name == DocTag.TOKEN:
             found_tokens += 1
 
     assert found_tokens == num_tokens
@@ -171,7 +185,7 @@ def test_tokenize_some(model, file, language, num_blocks, num_tokens):
 
     found_tokens = 0
     for tag in tags:
-        if tag.kind == "doc" and tag.name == "token":
+        if tag.kind == DocTag.DOCUMENT and tag.name == DocTag.TOKEN:
             found_tokens += 1
 
     assert found_tokens == num_tokens

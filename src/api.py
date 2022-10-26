@@ -24,6 +24,9 @@ class NlpCloudTaggerPluginConfig(Config):
     task: NlpCloudTask
     model: NlpCloudModel
 
+    class Config:
+        use_enum_values = False
+
 
 class NlpCloudTaggerPlugin(Tagger):
     config: NlpCloudTaggerPluginConfig
