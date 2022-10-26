@@ -34,6 +34,6 @@
     "authorEmail": "hello@steamship.com",
     "authorTwitter": "@GetSteamship",
     "authorUrl": "https://www.steamship.com/",
-    "tags": ["NLP", "SpaCy", "Parsing", "Summarization", "NER", "Sentiment ANalysis", "Intent Classification"]
+    "tags": ["NLP", "SpaCy", "Parsing", "Summarization", "NER", "Sentiment Analysis", "Intent Classification"]
   }
 }
