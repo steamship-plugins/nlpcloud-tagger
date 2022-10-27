@@ -43,44 +43,87 @@ class Granularity(str, Enum):
     BLOCK = "block"
     TAG = "tag"
 
-def _tag_matches(tag: Tag, kind_filter: str = None, name_filter: str = None) -> bool:
+def _tag_matches(tag: Tag, kind_filter: str = None, name_filter: str = None) -> Optional[Tag]:
     """Returns whether the tag matches the provided filter."""
-    return (
+    if (
         (kind_filter is None or tag.kind == kind_filter) and
         (name_filter is None or tag.name == name_filter)
-    )
+    ):
+        return tag
+    return None
 
-def _tags_match(tags: Optional[List[Tag]], kind_filter: str = None, name_filter: str = None) -> bool:
+def _tags_match(tags: Optional[List[Tag]], kind_filter: str = None, name_filter: str = None) -> Optional[List[Tag]]:
     """Returns whether one of the tags matches the provided filter."""
     if tags is None:
-        return False
+        return None
+    ret_tags = []
     for tag in tags:
-        if _tag_matches(tag, kind_filter=kind_filter, name_filter=name_filter):
-            return True
-    return False
+        if tag := _tag_matches(tag, kind_filter=kind_filter, name_filter=name_filter):
+            return ret_tags.append(tag)
 
-def _file_matches(file: File, kind_filter: str = None, name_filter: str = None) -> bool:
+    if len(ret_tags) > 0:
+        return ret_tags
+    return None
+
+
+def _file_matches(file: File, kind_filter: str = None, name_filter: str = None) -> Optional[List[Tag]]:
     """Returns whether one of the file tags matches the provided filter."""
     if not kind_filter and not name_filter:
-        return True
+        return None
     return _tags_match(file.tags, kind_filter=kind_filter, name_filter=name_filter)
 
-def _block_matches(block: Block, kind_filter: str = None, name_filter: str = None) -> bool:
+
+def _block_matches(block: Block, kind_filter: str = None, name_filter: str = None) -> Optional[List[Tag]]:
     """Returns whether one of the block tags matches the provided filter."""
     if not kind_filter and not name_filter:
-        return True
+        return None
     return _tags_match(block.tags, kind_filter=kind_filter, name_filter=name_filter)
 
 
-class TextInput(CamelModel):
+class Span(CamelModel):
+    """A span covering a region of text that is to be processed by a Tagger.
+
+    Attributes
+    ----------
+    file_id: str
+        ID of the file from which this Span comes.
+    block_id: Optional[str]
+        ID of the block from which this Span comes. None if the Span covers every block in the file and therefore
+        is intended to represents the File itself (e.g. classify this file) rather than the text within the file
+        (classify this region of text).
+    granularity: Granularity
+        What level of granularity this span is intended to represent:
+
+        - the entire File, producing file tags
+        - an entire Block within the file, producing block tags with no start_idx or end_idx
+        - a span of text within the file, producing block tags with start_idx or end_idx
+    text: str
+        The text covered by this span.
+    start_idx: Optional[int]
+        The start index of the span text.
+
+        - For granularity FILE, this is None
+        - For granularity BLOCK, this is 0
+        - For granularity TAG, this is the start_idx of the span of text within its block
+    end_idx: Optional[int]
+        The end index of the span text.
+
+        - For granularity FILE, this is None
+        - For granularity BLOCK, this is 0
+        - For granularity TAG, this is the end_idx of the span of text within its block
+    related_tags: Optional[List[Tag]]
+        The list of tags that caused this Span to be provided for consideration. For example, if this Span
+        was presented for consideration because of the intersection of a SENTENCE with "Some Person's Name"
+        and a SENTIMENT overlapping, then all three of those tags will be provided in case the Tagger chooses
+        to incorporate them in the tagging.
+    """
     file_id: str
     block_id: Optional[str]
     granularity: Granularity
     text: str
     start_idx: Optional[int]
     end_idx: Optional[int]
-    tag_kind: Optional[str]
-    tag_name: Optional[str]
+    related_tags: Optional[List[Tag]]
 
     @staticmethod
     def stream_from(
@@ -90,6 +133,8 @@ class TextInput(CamelModel):
             name_filter: str = None
     ) -> Generator["TextInput", None, None]:
         """Steams units of work to be provided as input to the tagger.
+
+        Only a simple mechanism for specifying the `related_tags` is provided at present.
 
         Attributes
         ----------
@@ -106,32 +151,30 @@ class TextInput(CamelModel):
             return
 
         if granularity == Granularity.FILE:
-            if _file_matches(file, kind_filter=kind_filter, name_filter=name_filter):
+            if tags := _file_matches(file, kind_filter=kind_filter, name_filter=name_filter):
                 all_text = "\n".join([block.text for block in file.blocks or [] if block.text])
-                yield TextInput(
+                yield Span(
                     file_id = file.id,
                     block_id = None,
                     granularity = Granularity.FILE,
                     text = all_text,
                     start_idx = None,
                     end_idx = None,
-                    tag_kind = kind_filter,
-                    tag_name = name_filter
+                    related_tags = tags
                 )
         elif granularity == Granularity.BLOCK:
             if not file.blocks:
                 return
             for block in file.blocks:
-                if _block_matches(block, kind_filter=kind_filter, name_filter=name_filter):
-                    yield TextInput(
+                if tags := _block_matches(block, kind_filter=kind_filter, name_filter=name_filter):
+                    yield Span(
                         file_id=file.id,
                         block_id=None,
                         granularity=Granularity.BLOCK,
                         text=block.text,
                         start_idx=0,
                         end_idx=len(block.text),
-                        tag_kind=kind_filter,
-                        tag_name=name_filter
+                        related_tags=tags
                     )
         elif granularity == Granularity.TAG:
             if not file.blocks:
@@ -140,14 +183,13 @@ class TextInput(CamelModel):
                 if not block.tags:
                     continue
                 for tag in block.tags:
-                    if _tag_matches(tag, kind_filter=kind_filter, name_filter=name_filter):
-                        yield TextInput(
+                    if tags := _tag_matches(tag, kind_filter=kind_filter, name_filter=name_filter):
+                        yield Span(
                             file_id=file.id,
                             block_id=None,
                             granularity=Granularity.TAG,
                             text=block.text[tag.start_idx:tag.end_idx],
                             start_idx=tag.start_idx,
                             end_idx=tag.end_idx,
-                            tag_kind=kind_filter,
-                            tag_name=name_filter
+                            related_tags=tags
                         )
