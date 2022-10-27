@@ -27,12 +27,17 @@ class NlpCloudTaggerPluginConfig(Config):
 
 class NlpCloudTaggerPlugin(SpanTagger, Invocable):
     config: NlpCloudTaggerPluginConfig
+    client: NlpCloudClient
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         # We know from docs.nlpcloud.com that only certain task<>model pairings are valid.
         validate_task_and_model(self.config.task, self.config.model)
+
+        self.client = NlpCloudClient(key=self.config.api_key)
+        if self.client is None:
+            raise SteamshipError(message="Unable to create NlpCloudClient.")
 
     def config_cls(self) -> Type[NlpCloudTaggerPluginConfig]:
         return NlpCloudTaggerPluginConfig
@@ -42,35 +47,14 @@ class NlpCloudTaggerPlugin(SpanTagger, Invocable):
             granularity=Granularity.BLOCK_TEXT
         )
 
-    def tag_spans(self, request: PluginRequest[List[Span]]) -> List[Tag.CreateRequest]:
-        client = NlpCloudClient(key=self.config.api_key)
-        if client is None:
-            raise SteamshipError(message="Unable to create NlpCloudClient.")
-
-        all_tags = []
-        for span in request.data:
-            # Create tags for that block via OneAI and add them
-            tags_lists: List[List[Tag.CreateRequest]] = client.request(
-                model=self.config.model,
-                task=self.config.task,
-                inputs=[span.text],
-            )
-
-            tags = tags_lists[0] or []
-
-            for tag in tags:
-                tag.file_id = span.file_id
-                if span.granularity != Granularity.FILE:
-                    tag.block_id = span.block_id
-                if span.granularity == Granularity.BLOCK_TEXT or span.granularity == Granularity.TAG:
-                    tag.start_idx = span.start_idx
-                    tag.end_idx = span.end_idx
-                else:
-                    tag.start_idx = None
-                    tag.end_idx = None
-
-                all_tags.append(tag)
-        return all_tags
+    def tag_span(self, request: PluginRequest[Span]) -> List[Tag.CreateRequest]:
+        tags_lists: List[List[Tag.CreateRequest]] = self.client.request(
+            model=self.config.model,
+            task=self.config.task,
+            inputs=[request.data.text],
+        )
+        tags = tags_lists[0] or []
+        return tags
 
 
 handler = create_handler(NlpCloudTaggerPlugin)

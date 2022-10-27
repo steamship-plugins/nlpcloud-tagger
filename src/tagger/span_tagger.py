@@ -96,8 +96,34 @@ class SpanTagger(PluginService[BlockAndTagPluginInput, BlockAndTagPluginOutput],
         BlockAndTagPluginInput. Right now these have to be provided via the Config block on the plugin."""
         raise NotImplementedError()
 
-    @abstractmethod
     def tag_spans(self, request: PluginRequest[List[Span]]) -> List[Tag.CreateRequest]:
+        all_tags = []
+        for span in request.data:
+            # TODO: A failing here is that the plugin request enables some behavior which is *global* to the request/
+            # response, whereas here it is wrapping something which is sub-atomic with respect to that layer.
+            plugin_request = PluginRequest(
+                data=span,
+                context=request.context,
+                status=request.status,
+                is_status_check=request.is_status_check
+            )
+            tags = self.tag_span(plugin_request)
+            for tag in tags:
+                tag.file_id = span.file_id
+                if span.granularity != Granularity.FILE:
+                    tag.block_id = span.block_id
+                if span.granularity == Granularity.BLOCK_TEXT or span.granularity == Granularity.TAG:
+                    tag.start_idx = span.start_idx
+                    tag.end_idx = span.end_idx
+                else:
+                    tag.start_idx = None
+                    tag.end_idx = None
+
+                all_tags.append(tag)
+        return all_tags
+
+    @abstractmethod
+    def tag_span(self, request: PluginRequest[Span]) -> List[Tag.CreateRequest]:
         """The plugin author now just has to implement tagging over the provided spans."""
         raise NotImplementedError()
 
