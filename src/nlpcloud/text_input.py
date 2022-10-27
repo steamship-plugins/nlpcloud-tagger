@@ -1,4 +1,4 @@
-"""TextInput class for streaming units of work to a Tagger for processing.
+"""Span class for streaming units of work to a Tagger for processing.
 
 This class is being implemented in the NLPCloud Tagger to act as a proposal for broader inclusion in either the
 Python Client or even the Engine as a native operation.
@@ -9,7 +9,7 @@ Sometimes a user wants to classify / embed / tag only a subset of a document. Fo
 
 Currently there is no standardized way to express this wish: it's up to the Tagger Plugin author to decide
 how to handle it. This feels like something universal enough to begin playing an abstraction that could be
-adopted globally. The TextInput class is a first draft sketch of doing that.
+adopted globally. The Span class is a first draft sketch of doing that.
 
 Here's how it works:
 
@@ -19,7 +19,7 @@ Given:
 - a desired unit of `Granularity` (FILE, BLOCK, TAG), and
 - optional `kind` and `name` filters upon `Tag`
 
-The `TextInput.stream_from` method generates a list of provenance-stamped text inputs that can be provided to
+The `Span.stream_from` method generates a list of provenance-stamped text inputs that can be provided to
 whatever operation the tagger implements.
 
 For now, the `granularity`, `kind`, and `name` arguments can be provided in the `Config` of the `NLPTagger` class.
@@ -131,7 +131,7 @@ class Span(CamelModel):
             granularity: Granularity = None,
             kind_filter: str = None,
             name_filter: str = None
-    ) -> Generator["TextInput", None, None]:
+    ) -> Generator["Span", None, None]:
         """Steams units of work to be provided as input to the tagger.
 
         Only a simple mechanism for specifying the `related_tags` is provided at present.
