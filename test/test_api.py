@@ -27,14 +27,14 @@ def _read_test_file_lines(filename: str) -> List[str]:
 
 def _read_test_file(filename: str) -> File:
     lines = _read_test_file_lines(filename)
-    blocks = list(map(lambda line: Block(text=line), lines))
-    return File(blocks=blocks)
+    blocks = list(map(lambda t: Block(id=t[0], text=t[1]), enumerate(lines)))
+    return File(id="XYZ", blocks=blocks)
 
 
 def _file_from_string(string: str) -> File:
     lines = string.split("\n")
-    blocks = list(map(lambda line: Block(text=line), lines))
-    return File(blocks=blocks)
+    blocks = list(map(lambda t: Block(id=t[0], text=t[1]), enumerate(lines)))
+    return File(id="XYZ", blocks=blocks)
 
 
 @pytest.fixture

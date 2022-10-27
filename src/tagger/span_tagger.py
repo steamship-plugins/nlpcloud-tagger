@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Union
 
-from steamship import File, SteamshipError
+from steamship import Block, File, SteamshipError, Tag
 from steamship.base.model import CamelModel
 from steamship.invocable import InvocableResponse, post
 from steamship.invocable.plugin_service import PluginService
@@ -11,7 +11,6 @@ from steamship.plugin.outputs.block_and_tag_plugin_output import \
     BlockAndTagPluginOutput
 from steamship.plugin.request import PluginRequest
 
-from build.deps.steamship import Block
 from tagger.span import Granularity, Span
 
 
@@ -20,21 +19,22 @@ class SpanStreamingConfig(CamelModel):
     kind_filter: Optional[str]
     name_filter: Optional[str]
 
-class Tagger(PluginService[BlockAndTagPluginInput, BlockAndTagPluginOutput], ABC):
+class SpanTagger(PluginService[BlockAndTagPluginInput, BlockAndTagPluginOutput], ABC):
     """An implementation of a Tagger that permits implementors to care only about Spans."""
 
     def run(
         self, request: PluginRequest[BlockAndTagPluginInput]
     ) -> Union[InvocableResponse[BlockAndTagPluginOutput], BlockAndTagPluginOutput]:
         args = self.get_span_streaming_args()
-        spans = list(
-            Span.stream_from(
+
+        spans = [
+            span for span in Span.stream_from(
                 file=request.data.file,
                 granularity=args.granularity,
                 kind_filter=args.kind_filter,
                 name_filter=args.name_filter
             )
-        )
+        ]
         output_tags = self.tag_spans(
             PluginRequest(
                 data=spans,

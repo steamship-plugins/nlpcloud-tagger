@@ -12,7 +12,7 @@ from nlpcloud.api_spec import (NlpCloudModel, NlpCloudTask,
                                validate_task_and_model)
 from nlpcloud.client import NlpCloudClient
 from tagger.span import Granularity, Span
-from tagger.span_tagger import SpanStreamingConfig
+from tagger.span_tagger import SpanStreamingConfig, SpanTagger
 
 
 class NlpCloudTaggerPluginConfig(Config):
@@ -23,9 +23,6 @@ class NlpCloudTaggerPluginConfig(Config):
     class Config:
         use_enum_values = False
 
-
-class SpanTagger:
-    pass
 
 
 class NlpCloudTaggerPlugin(SpanTagger, Invocable):
@@ -65,7 +62,10 @@ class NlpCloudTaggerPlugin(SpanTagger, Invocable):
                 tag.file_id = span.file_id
                 if span.granularity != Granularity.FILE:
                     tag.block_id = span.block_id
-                if span.granularity == Granularity.BLOCK:
+                if span.granularity == Granularity.BLOCK_TEXT or span.granularity == Granularity.TAG:
+                    tag.start_idx = span.start_idx
+                    tag.end_idx = span.end_idx
+                else:
                     tag.start_idx = None
                     tag.end_idx = None
 

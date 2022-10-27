@@ -57,6 +57,9 @@ class Granularity(str, Enum):
     BLOCK_TEXT = "blocktext"
     TAG = "tag"
 
+def _no_filter(kind_filter: str = None, name_filter: str = None) -> bool:
+    return kind_filter is None and name_filter is None
+
 def _tag_matches(tag: Tag, kind_filter: str = None, name_filter: str = None) -> Optional[Tag]:
     """Returns whether the tag matches the provided filter."""
     if (
@@ -73,7 +76,7 @@ def _tags_match(tags: Optional[List[Tag]], kind_filter: str = None, name_filter:
     ret_tags = []
     for tag in tags:
         if tag := _tag_matches(tag, kind_filter=kind_filter, name_filter=name_filter):
-            return ret_tags.append(tag)
+            ret_tags.append(tag)
 
     if len(ret_tags) > 0:
         return ret_tags
@@ -165,30 +168,27 @@ class Span(CamelModel):
             return
 
         if granularity == Granularity.FILE:
-            if tags := _file_matches(file, kind_filter=kind_filter, name_filter=name_filter):
+            tags = _file_matches(file, kind_filter=kind_filter, name_filter=name_filter)
+            if tags or _no_filter(kind_filter, name_filter):
                 all_text = "\n".join([block.text for block in file.blocks or [] if block.text])
                 yield Span(
                     file_id = file.id,
-                    block_id = None,
                     granularity = Granularity.FILE,
                     text = all_text,
-                    start_idx = None,
-                    end_idx = None,
-                    related_tags = tags
+                    related_tags = tags or []
                 )
         elif granularity == Granularity.BLOCK:
             if not file.blocks:
                 return
             for block in file.blocks:
-                if tags := _block_matches(block, kind_filter=kind_filter, name_filter=name_filter):
+                tags = _block_matches(block, kind_filter=kind_filter, name_filter=name_filter)
+                if tags or _no_filter(kind_filter, name_filter):
                     yield Span(
                         file_id=file.id,
                         block_id=block.id,
                         granularity=Granularity.BLOCK,
                         text=block.text,
-                        start_idx=0,
-                        end_idx=len(block.text),
-                        related_tags=tags
+                        related_tags=tags or []
                     )
         elif granularity == Granularity.TAG:
             if not file.blocks:
@@ -197,7 +197,8 @@ class Span(CamelModel):
                 if not block.tags:
                     continue
                 for tag in block.tags:
-                    if tags := _tag_matches(tag, kind_filter=kind_filter, name_filter=name_filter):
+                    tags = _tag_matches(tag, kind_filter=kind_filter, name_filter=name_filter)
+                    if tags or _no_filter(kind_filter, name_filter):
                         yield Span(
                             file_id=file.id,
                             block_id=block.id,
@@ -205,22 +206,20 @@ class Span(CamelModel):
                             text=block.text[tag.start_idx:tag.end_idx],
                             start_idx=tag.start_idx,
                             end_idx=tag.end_idx,
-                            related_tags=tags
+                            related_tags=tags or []
                         )
         elif granularity == Granularity.BLOCK_TEXT:
             if not file.blocks:
                 return
             for block in file.blocks:
-                if not block.tags:
-                    continue
-                for tag in block.tags:
-                    if tags := _tag_matches(tag, kind_filter=kind_filter, name_filter=name_filter):
-                        yield Span(
-                            file_id=file.id,
-                            block_id=block.id,
-                            granularity=Granularity.BLOCK_TEXT,
-                            text=block.text[tag.start_idx:tag.end_idx],
-                            start_idx=tag.start_idx,
-                            end_idx=tag.end_idx,
-                            related_tags=tags
-                        )
+                tags = _block_matches(block, kind_filter=kind_filter, name_filter=name_filter)
+                if tags or _no_filter(kind_filter, name_filter):
+                    yield Span(
+                        file_id=file.id,
+                        block_id=block.id,
+                        granularity=Granularity.BLOCK_TEXT,
+                        text=block.text,
+                        start_idx=0,
+                        end_idx=len(block.text),
+                        related_tags=tags or []
+                    )
