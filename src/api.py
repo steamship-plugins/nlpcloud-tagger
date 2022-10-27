@@ -1,21 +1,17 @@
 """Steamship NLPCloud Plugin
 """
 
-import logging
-import pathlib
 from typing import List, Optional, Type
 
-import toml
 from steamship import Block, Tag
-from steamship.app import App, create_handler
 from steamship.base.error import SteamshipError
 from steamship.data.file import File
-from steamship.plugin.blockifier import Config
+from steamship.invocable import Config, create_handler
 from steamship.plugin.inputs.block_and_tag_plugin_input import \
     BlockAndTagPluginInput
 from steamship.plugin.outputs.block_and_tag_plugin_output import \
     BlockAndTagPluginOutput
-from steamship.plugin.service import PluginRequest
+from steamship.plugin.request import PluginRequest
 from steamship.plugin.tagger import Tagger
 
 from nlpcloud.api_spec import (NlpCloudModel, NlpCloudTask,
@@ -28,19 +24,15 @@ class NlpCloudTaggerPluginConfig(Config):
     task: NlpCloudTask
     model: NlpCloudModel
 
+    class Config:
+        use_enum_values = False
 
-class NlpCloudTaggerPlugin(Tagger, App):
+
+class NlpCloudTaggerPlugin(Tagger):
+    config: NlpCloudTaggerPluginConfig
+
     def __init__(self, **kwargs):
-        secret_kwargs = toml.load(
-            str(pathlib.Path(__file__).parent / ".steamship" / "secrets.toml")
-        )
-        config = kwargs["config"] or {}
-        kwargs["config"] = {
-            **secret_kwargs,
-            **{k: v for k, v in config.items() if v != ""},
-        }
         super().__init__(**kwargs)
-        logging.info(self.config)
 
         # We know from docs.nlpcloud.com that only certain task<>model pairings are valid.
         validate_task_and_model(self.config.task, self.config.model)
