@@ -3,20 +3,16 @@
 
 from typing import List, Optional, Type
 
-from steamship import Block, Tag
+from steamship import Tag
 from steamship.base.error import SteamshipError
-from steamship.data.file import File
-from steamship.invocable import Config, create_handler
-from steamship.plugin.inputs.block_and_tag_plugin_input import \
-    BlockAndTagPluginInput
-from steamship.plugin.outputs.block_and_tag_plugin_output import \
-    BlockAndTagPluginOutput
+from steamship.invocable import Config, Invocable, create_handler
 from steamship.plugin.request import PluginRequest
-from steamship.plugin.tagger import Tagger
 
 from nlpcloud.api_spec import (NlpCloudModel, NlpCloudTask,
                                validate_task_and_model)
 from nlpcloud.client import NlpCloudClient
+from tagger.span import Granularity, Span
+from tagger.span_tagger import SpanStreamingConfig
 
 
 class NlpCloudTaggerPluginConfig(Config):
@@ -28,7 +24,11 @@ class NlpCloudTaggerPluginConfig(Config):
         use_enum_values = False
 
 
-class NlpCloudTaggerPlugin(Tagger):
+class SpanTagger:
+    pass
+
+
+class NlpCloudTaggerPlugin(SpanTagger, Invocable):
     config: NlpCloudTaggerPluginConfig
 
     def __init__(self, **kwargs):
@@ -40,35 +40,37 @@ class NlpCloudTaggerPlugin(Tagger):
     def config_cls(self) -> Type[NlpCloudTaggerPluginConfig]:
         return NlpCloudTaggerPluginConfig
 
-    def run(
-        self, request: PluginRequest[BlockAndTagPluginInput]
-    ) -> BlockAndTagPluginOutput:
-        # TODO: Ensure base Tagger class checks to make sure this is not None
-        file = request.data.file
+    def get_span_streaming_args(self) -> SpanStreamingConfig:
+        return SpanStreamingConfig(
+            granularity=Granularity.BLOCK_TEXT
+        )
 
+    def tag_spans(self, request: PluginRequest[List[Span]]) -> List[Tag.CreateRequest]:
         client = NlpCloudClient(key=self.config.api_key)
         if client is None:
             raise SteamshipError(message="Unable to create NlpCloudClient.")
 
-        output = BlockAndTagPluginOutput(file=File.CreateRequest())
-
-        for block in request.data.file.blocks:
+        all_tags = []
+        for span in request.data:
             # Create tags for that block via OneAI and add them
             tags_lists: List[List[Tag.CreateRequest]] = client.request(
                 model=self.config.model,
                 task=self.config.task,
-                inputs=[block.text],
+                inputs=[span.text],
             )
 
             tags = tags_lists[0] or []
 
-            # Create an output block for this block
-            output_block = Block.CreateRequest(id=block.id, tags=tags)
+            for tag in tags:
+                tag.file_id = span.file_id
+                if span.granularity != Granularity.FILE:
+                    tag.block_id = span.block_id
+                if span.granularity == Granularity.BLOCK:
+                    tag.start_idx = None
+                    tag.end_idx = None
 
-            # Attach the output block to the response
-            output.file.blocks.append(output_block)
-
-        return output
+                all_tags.append(tag)
+        return all_tags
 
 
 handler = create_handler(NlpCloudTaggerPlugin)

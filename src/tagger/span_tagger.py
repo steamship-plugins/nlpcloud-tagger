@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from steamship import File, SteamshipError
 from steamship.base.model import CamelModel
@@ -25,7 +25,7 @@ class Tagger(PluginService[BlockAndTagPluginInput, BlockAndTagPluginOutput], ABC
 
     def run(
         self, request: PluginRequest[BlockAndTagPluginInput]
-    ) -> InvocableResponse[BlockAndTagPluginOutput]:
+    ) -> Union[InvocableResponse[BlockAndTagPluginOutput], BlockAndTagPluginOutput]:
         args = self.get_span_streaming_args()
         spans = list(
             Span.stream_from(
@@ -57,22 +57,34 @@ class Tagger(PluginService[BlockAndTagPluginInput, BlockAndTagPluginOutput], ABC
         for tag in output_tags:
             if tag.file_id is None:
                 raise SteamshipError(message="All Tags should have a file_id field")
+
+            # Make sure the block_id has been provided correctly
             if args.granularity == Granularity.FILE:
                 if tag.block_id is not None:
-                    raise SteamshipError(message="A tag with a granularity of FILE should not have a block_id field")
+                    raise SteamshipError(message="A tag with a granularity of FILE should not have a block_id")
+            else:
+                if tag.block_id is None:
+                    raise SteamshipError(message="A tag with a granularity of BLOCK, BLOCK_TEXT, or TAG should have a block_id")
+                if tag.block_id not in block_lookup:
+                    raise SteamshipError(message=f"The referenced block_id {tag.block_id} was not among the input Blocks")
+
+            # Make sure the start_idx and end_idx have been provided correctly
+            if args.granularity == Granularity.FILE or args.granularity == Granularity.BLOCK:
+                if tag.start_idx is not None:
+                    raise SteamshipError(message="A Tag with a granularity of FILE or BLOCK should not have a start_idx")
+                if tag.end_idx is not None:
+                    raise SteamshipError(message="A Tag with a granularity of FILE or BLOCK should not have a end_idx")
+            else:
+                if tag.start_idx is None:
+                    raise SteamshipError(message="A Tag with a granularity of BLOCK_TEXT or TAG should have a start_idx")
+                if tag.end_idx is None:
+                    raise SteamshipError(message="A Tag with a granularity of BLOCK_TEXT or TAG should have an end_idx")
+
+            # Finally, add the tag.
+            if args.granularity == Granularity.FILE:
                 output.file.tags.append(tag)
-            elif args.granularity == Granularity.TAG or args.granularity == Granularity.BLOCK:
-                if args.granularity.BLOCK:
-                    if tag.start_idx is not None:
-                        raise SteamshipError(message="A Tag with a granularity of BLOCK should not have a start_idx field")
-                    if tag.end_idx is not None:
-                        raise SteamshipError(message="A Tag with a granularity of BLOCK should not have a end_idx field")
-                    if tag.block_id is None:
-                        raise SteamshipError(message="Error: a Tag with a granularity of BLOCK or TAG should have a block_id field")
-                    if tag.block_id not in block_lookup:
-                        raise SteamshipError(message=f"Error: the referenced block_id {tag.block_id} was not among the input Blocks")
-                    # Phew. Ok.
-                    block_lookup[tag.block_id].tags.append(tag)
+            else:
+                block_lookup[tag.block_id].tags.append(tag)
 
         # Finally, we can return the output
         return output
