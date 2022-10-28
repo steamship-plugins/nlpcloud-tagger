@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 
 import requests
 from steamship import SteamshipError
-from steamship.data.tags import DocTag, Tag, TagKind
+from steamship.data.tags import DocTag, Tag, TagKind, TagValue, TokenTag
 
 from nlpcloud.api_spec import (NlpCloudModel, NlpCloudTask,
                                validate_task_and_model)
@@ -63,7 +63,7 @@ def nlp_cloud_response_to_steamship_tag(
         intent = response.get("intent")
         if intent is None:
             return []
-        return [Tag.CreateRequest(kind="intent", name=intent)]
+        return [Tag.CreateRequest(kind=TagKind.INTENT, name=intent)]
     elif task == NlpCloudTask.KEY_PHRASE_EXTRACTION:
         # {keywords_and_keyphrases: [keyword]}
         phrases = response.get("keywords_and_keyphrases")
@@ -79,7 +79,7 @@ def nlp_cloud_response_to_steamship_tag(
                 score = language[language_code]
                 ret.append(
                     Tag.CreateRequest(
-                        kind="language", name=language_code, value={"score": score}
+                        kind="language", name=language_code, value={TagValue.SCORE: score}
                     )
                 )
         return ret
@@ -97,7 +97,7 @@ def nlp_cloud_response_to_steamship_tag(
                 kind=label.get("emotion"),
                 name=label.get("label"),
                 value={
-                    "score": label.get("score")
+                    TagValue.SCORE: label.get("score")
                 },
             )
             for label in response.get("scored_labels", [])
@@ -112,7 +112,7 @@ def nlp_cloud_response_to_steamship_tag(
                 end_idx=token.get("end"),
                 value={
                     "ws_after": token.get("ws_after"),
-                    "lemma": token.get("lemma"),
+                    TokenTag.LEMMA: token.get("lemma"),
                     "text": token.get("text"),
                 },
             )
@@ -126,10 +126,10 @@ def nlp_cloud_response_to_steamship_tag(
 
         return [
             Tag.CreateRequest(
-                kind="embedding",
+                kind=TagKind.EMBEDDING,
                 name="via-nlpcloud",
                 value={
-                    "value": embeddings[0]  # For now we don't pool requests.
+                    TagValue.VECTOR_VALUE: embeddings[0]  # For now we don't pool requests.
                 },
             )
         ]

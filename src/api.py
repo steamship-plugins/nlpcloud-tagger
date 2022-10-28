@@ -20,9 +20,12 @@ class NlpCloudTaggerPluginConfig(Config):
     task: NlpCloudTask
     model: NlpCloudModel
 
+    granularity: Granularity = Granularity.BLOCK_TEXT
+    kind_filter: Optional[str] = None
+    name_filter: Optional[str] = None
+
     class Config:
         use_enum_values = False
-
 
 
 class NlpCloudTaggerPlugin(SpanTagger, Invocable):
@@ -44,7 +47,9 @@ class NlpCloudTaggerPlugin(SpanTagger, Invocable):
 
     def get_span_streaming_args(self) -> SpanStreamingConfig:
         return SpanStreamingConfig(
-            granularity=Granularity.BLOCK_TEXT
+            granularity=self.config.granularity,
+            kind_filter=self.config.kind_filter,
+            name_filter=self.config.name_filter
         )
 
     def tag_span(self, request: PluginRequest[Span]) -> List[Tag.CreateRequest]:

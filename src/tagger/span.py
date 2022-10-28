@@ -197,8 +197,8 @@ class Span(CamelModel):
                 if not block.tags:
                     continue
                 for tag in block.tags:
-                    tags = _tag_matches(tag, kind_filter=kind_filter, name_filter=name_filter)
-                    if tags or _no_filter(kind_filter, name_filter):
+                    matched_tag = _tag_matches(tag, kind_filter=kind_filter, name_filter=name_filter)
+                    if matched_tag or _no_filter(kind_filter, name_filter):
                         yield Span(
                             file_id=file.id,
                             block_id=block.id,
@@ -206,7 +206,7 @@ class Span(CamelModel):
                             text=block.text[tag.start_idx:tag.end_idx],
                             start_idx=tag.start_idx,
                             end_idx=tag.end_idx,
-                            related_tags=tags or []
+                            related_tags=[matched_tag] if matched_tag is not None else []
                         )
         elif granularity == Granularity.BLOCK_TEXT:
             if not file.blocks:
