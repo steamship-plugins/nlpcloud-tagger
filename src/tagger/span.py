@@ -40,21 +40,12 @@ from steamship.base.model import CamelModel
 
 class Granularity(str, Enum):
     """
-    TODO: I can't figure out if there's an easy way to get rid of BLOCKTEXT.
-
-    BLOCK means "Tag with block_id but no start_idx and no end_idx"
+    FILE means "Tag with no block_id, no start_idx, and no end_idx"
+    BLOCK means "Tags that all have start_idx=0 and end_idx=len(block.text)"
     TAG means "Tag with block_id, start_idx, and end_idx"
-    BLOCK_TEXT means "Tags that all have start_idx=0 and end_idx=len(block.text)
-
-    I think in a later version of this design in which the Engine participates w/ the Query System,
-    this is a resolved issue: the Engine will simply model BLOCK_TEXT as TAG with [0,n] as the values.
-
-    But while we're shimming this in,  I can't find a way for this concept to exist without changing
-    what it means to be a "Block tag".
     """
     FILE = "file"
-    BLOCK = "block"
-    BLOCK_TEXT = "blocktext"
+    BLOCK = "blocktext"
     TAG = "tag"
 
 def _no_filter(kind_filter: str = None, name_filter: str = None) -> bool:
@@ -119,14 +110,12 @@ class Span(CamelModel):
     start_idx: Optional[int]
         The start index of the span text.
         - For granularity FILE, this is None
-        - For granularity BLOCK, this is None
-        - For granularity BLOCK_TEXT, this is 0
+        - For granularity BLOCK, this is 0
         - For granularity TAG, this is the start_idx of the span of text within its block
     end_idx: Optional[int]
         The end index of the span text.
         - For granularity FILE, this is None
-        - For granularity BLOCK, this is None
-        - For granularity BLOCK_TEXT, this is len(block.text)
+        - For granularity BLOCK, this is len(block.text)
         - For granularity TAG, this is the end_idx of the span of text within its block
     related_tags: Optional[List[Tag]]
         The list of tags that caused this Span to be provided for consideration. For example, if this Span
@@ -177,19 +166,6 @@ class Span(CamelModel):
                     text = all_text,
                     related_tags = tags or []
                 )
-        elif granularity == Granularity.BLOCK:
-            if not file.blocks:
-                return
-            for block in file.blocks:
-                tags = _block_matches(block, kind_filter=kind_filter, name_filter=name_filter)
-                if tags or _no_filter(kind_filter, name_filter):
-                    yield Span(
-                        file_id=file.id,
-                        block_id=block.id,
-                        granularity=Granularity.BLOCK,
-                        text=block.text,
-                        related_tags=tags or []
-                    )
         elif granularity == Granularity.TAG:
             if not file.blocks:
                 return
@@ -208,7 +184,7 @@ class Span(CamelModel):
                             end_idx=tag.end_idx,
                             related_tags=[matched_tag] if matched_tag is not None else []
                         )
-        elif granularity == Granularity.BLOCK_TEXT:
+        elif granularity == Granularity.BLOCK:
             if not file.blocks:
                 return
             for block in file.blocks:
@@ -217,7 +193,7 @@ class Span(CamelModel):
                     yield Span(
                         file_id=file.id,
                         block_id=block.id,
-                        granularity=Granularity.BLOCK_TEXT,
+                        granularity=Granularity.BLOCK,
                         text=block.text,
                         start_idx=0,
                         end_idx=len(block.text),

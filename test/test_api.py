@@ -154,7 +154,6 @@ def test_parse_english_sentence(parser):
 
 @pytest.mark.parametrize("granularity", [
     Granularity.FILE,
-    Granularity.BLOCK_TEXT,
     Granularity.BLOCK
 ])
 @pytest.mark.parametrize(
@@ -182,7 +181,7 @@ def test_detect_language(granularity, file, language):
     request = PluginRequest(data=BlockAndTagPluginInput(file=file))
     response = language_detector.run(request)
 
-    if granularity == Granularity.BLOCK_TEXT or granularity == Granularity.BLOCK:
+    if granularity == Granularity.BLOCK:
         assert not response.file.tags
         assert len(response.file.tags) == 0
         assert len(response.file.blocks) == 1
@@ -190,7 +189,7 @@ def test_detect_language(granularity, file, language):
         assert response.file.blocks[0].tags[0].kind == "language"
         assert response.file.blocks[0].tags[0].name == language
         assert response.file.blocks[0].tags[0].value.get("score") is not None
-        if granularity == Granularity.BLOCK_TEXT:
+        if granularity == Granularity.BLOCK:
             assert response.file.blocks[0].tags[0].start_idx == 0
             assert response.file.blocks[0].tags[0].end_idx == len(file.blocks[0].text)
         else:

@@ -20,7 +20,7 @@ class NlpCloudTaggerPluginConfig(Config):
     task: NlpCloudTask
     model: NlpCloudModel
 
-    granularity: Granularity = Granularity.BLOCK_TEXT
+    granularity: Granularity = Granularity.BLOCK
     kind_filter: Optional[str] = None
     name_filter: Optional[str] = None
 

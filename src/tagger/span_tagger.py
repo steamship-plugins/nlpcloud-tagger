@@ -69,7 +69,7 @@ class SpanTagger(PluginService[BlockAndTagPluginInput, BlockAndTagPluginOutput],
                     raise SteamshipError(message=f"The referenced block_id {tag.block_id} was not among the input Blocks")
 
             # Make sure the start_idx and end_idx have been provided correctly
-            if args.granularity == Granularity.FILE or args.granularity == Granularity.BLOCK:
+            if args.granularity == Granularity.FILE:
                 if tag.start_idx is not None:
                     raise SteamshipError(message="A Tag with a granularity of FILE or BLOCK should not have a start_idx")
                 if tag.end_idx is not None:
@@ -99,8 +99,6 @@ class SpanTagger(PluginService[BlockAndTagPluginInput, BlockAndTagPluginOutput],
     def tag_spans(self, request: PluginRequest[List[Span]]) -> List[Tag.CreateRequest]:
         all_tags = []
         for span in request.data:
-            # TODO: A failing here is that the plugin request enables some behavior which is *global* to the request/
-            # response, whereas here it is wrapping something which is sub-atomic with respect to that layer.
             plugin_request = PluginRequest(
                 data=span,
                 context=request.context,
@@ -112,7 +110,7 @@ class SpanTagger(PluginService[BlockAndTagPluginInput, BlockAndTagPluginOutput],
                 tag.file_id = span.file_id
                 if span.granularity != Granularity.FILE:
                     tag.block_id = span.block_id
-                if span.granularity == Granularity.BLOCK_TEXT or span.granularity == Granularity.TAG:
+                if span.granularity == Granularity.BLOCK or span.granularity == Granularity.TAG:
                     tag.start_idx = span.start_idx
                     tag.end_idx = span.end_idx
                 else:

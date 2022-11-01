@@ -151,7 +151,7 @@ def nlp_cloud_requests(
         NlpCloudTask.SENTIMENT,
         NlpCloudTask.TOKENS,
     ]:
-        # {text: str}
+        # {texst: str}
         return [{"text": s} for s in inputs]
     elif task == NlpCloudTask.CLASSIFICATION:
         # {text: str, multi_class: bool, labels: str[]}
