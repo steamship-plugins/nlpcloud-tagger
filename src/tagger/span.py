@@ -123,7 +123,7 @@ class Span(CamelModel):
         and a SENTIMENT overlapping, then all three of those tags will be provided in case the Tagger chooses
         to incorporate them in the tagging.
     """
-    file_id: str
+    file_id: Optional[str]
     block_id: Optional[str]
     granularity: Granularity
     text: str

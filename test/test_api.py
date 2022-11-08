@@ -120,6 +120,19 @@ def test_embed_english_sentence():
             assert tag_1.start_idx == tag_2.start_idx
             assert tag_1.end_idx == tag_2.end_idx
 
+    # Now try without a file_id, which is how the embedding index will call it.
+    file.id = None
+
+    request = PluginRequest(data=BlockAndTagPluginInput(file=file))
+    response = embedder_block_text.run(request)
+    assert len(response.file.blocks) > 0
+    for block in response.file.blocks:
+        assert len(block.tags) > 0
+        for tag in block.tags:
+            assert tag.kind == TagKind.EMBEDDING
+            assert tag.value.get(TagValue.VECTOR_VALUE) is not None
+            assert len(tag.value.get(TagValue.VECTOR_VALUE)) == 768
+
 def test_parse_english_sentence(parser):
     """Test an end-to-end run on the general structure of the full request-response"""
     FILE = "roses.txt"

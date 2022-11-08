@@ -55,8 +55,9 @@ class SpanTagger(PluginService[BlockAndTagPluginInput, BlockAndTagPluginOutput],
 
         # Go through each span and add to the appropriate place.
         for tag in output_tags:
-            if tag.file_id is None:
-                raise SteamshipError(message="All Tags should have a file_id field")
+            # Leaving in so we can think about it; but the embedding index will not produce files with ids
+            # if tag.file_id is None:
+            #     raise SteamshipError(message="All Tags should have a file_id field")
 
             # Make sure the block_id has been provided correctly
             if args.granularity == Granularity.FILE:
